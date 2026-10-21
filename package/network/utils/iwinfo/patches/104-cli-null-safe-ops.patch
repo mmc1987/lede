@@ -1,0 +1,301 @@
+--- a/iwinfo_cli.c
++++ b/iwinfo_cli.c
+@@ -387,7 +387,7 @@
+ 	static char buf[20];
+ 	struct iwinfo_hardware_id ids;
+ 
+-	if (!iw->hardware_id(ifname, (char *)&ids))
++	if (iw->hardware_id && !iw->hardware_id(ifname, (char *)&ids))
+ 	{
+ 		if (strlen(ids.compatible) > 0)
+ 			snprintf(buf, sizeof(buf), "embedded");
+@@ -412,7 +412,7 @@
+ {
+ 	static char buf[128];
+ 
+-	if (iw->hardware_name(ifname, buf))
++	if (!iw->hardware_name || iw->hardware_name(ifname, buf))
+ 		snprintf(buf, sizeof(buf), "unknown");
+ 
+ 	return buf;
+@@ -423,7 +423,7 @@
+ 	int off;
+ 	static char buf[12];
+ 
+-	if (iw->txpower_offset(ifname, &off))
++	if (!iw->txpower_offset || iw->txpower_offset(ifname, &off))
+ 		snprintf(buf, sizeof(buf), "unknown");
+ 	else if (off != 0)
+ 		snprintf(buf, sizeof(buf), "%d dB", off);
+@@ -438,7 +438,7 @@
+ 	int off;
+ 	static char buf[12];
+ 
+-	if (iw->frequency_offset(ifname, &off))
++	if (!iw->frequency_offset || iw->frequency_offset(ifname, &off))
+ 		snprintf(buf, sizeof(buf), "unknown");
+ 	else if (off != 0)
+ 		snprintf(buf, sizeof(buf), "%.3f GHz", ((float)off / 1000.0));
+@@ -452,7 +452,7 @@
+ {
+ 	char buf[IWINFO_ESSID_MAX_SIZE+1] = { 0 };
+ 
+-	if (iw->ssid(ifname, buf))
++	if (!iw->ssid || iw->ssid(ifname, buf))
+ 		memset(buf, 0, sizeof(buf));
+ 
+ 	return format_ssid(buf);
+@@ -462,7 +462,7 @@
+ {
+ 	static char buf[18] = { 0 };
+ 
+-	if (iw->bssid(ifname, buf))
++	if (!iw->bssid || iw->bssid(ifname, buf))
+ 		snprintf(buf, sizeof(buf), "00:00:00:00:00:00");
+ 
+ 	return buf;
+@@ -473,7 +473,7 @@
+ 	int mode;
+ 	static char buf[128];
+ 
+-	if (iw->mode(ifname, &mode))
++	if (!iw->mode || iw->mode(ifname, &mode))
+ 		mode = IWINFO_OPMODE_UNKNOWN;
+ 
+ 	snprintf(buf, sizeof(buf), "%s", IWINFO_OPMODE_NAMES[mode]);
+@@ -484,7 +484,7 @@
+ static char * print_channel(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int ch;
+-	if (iw->channel(ifname, &ch))
++	if (!iw->channel || iw->channel(ifname, &ch))
+ 		ch = -1;
+ 
+ 	return format_channel(ch);
+@@ -493,7 +493,7 @@
+ static char * print_center_chan1(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int ch;
+-	if (iw->center_chan1(ifname, &ch))
++	if (!iw->center_chan1 || iw->center_chan1(ifname, &ch))
+ 		ch = -1;
+ 
+ 	return format_channel(ch);
+@@ -502,7 +502,7 @@
+ static char * print_center_chan2(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int ch;
+-	if (iw->center_chan2(ifname, &ch))
++	if (!iw->center_chan2 || iw->center_chan2(ifname, &ch))
+ 		ch = -1;
+ 
+ 	return format_channel(ch);
+@@ -511,7 +511,7 @@
+ static char * print_frequency(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int freq;
+-	if (iw->frequency(ifname, &freq))
++	if (!iw->frequency || iw->frequency(ifname, &freq))
+ 		freq = -1;
+ 
+ 	return format_frequency(freq);
+@@ -520,10 +520,10 @@
+ static char * print_txpower(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int pwr, off;
+-	if (iw->txpower_offset(ifname, &off))
++	if (!iw->txpower_offset || iw->txpower_offset(ifname, &off))
+ 		off = 0;
+ 
+-	if (iw->txpower(ifname, &pwr))
++	if (!iw->txpower || iw->txpower(ifname, &pwr))
+ 		pwr = -1;
+ 	else
+ 		pwr += off;
+@@ -534,7 +534,7 @@
+ static char * print_quality(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int qual;
+-	if (iw->quality(ifname, &qual))
++	if (!iw->quality || iw->quality(ifname, &qual))
+ 		qual = -1;
+ 
+ 	return format_quality(qual);
+@@ -543,7 +543,7 @@
+ static char * print_quality_max(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int qmax;
+-	if (iw->quality_max(ifname, &qmax))
++	if (!iw->quality_max || iw->quality_max(ifname, &qmax))
+ 		qmax = -1;
+ 
+ 	return format_quality_max(qmax);
+@@ -552,7 +552,7 @@
+ static char * print_signal(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int sig;
+-	if (iw->signal(ifname, &sig))
++	if (!iw->signal || iw->signal(ifname, &sig))
+ 		sig = 0;
+ 
+ 	return format_signal(sig);
+@@ -561,7 +561,7 @@
+ static char * print_noise(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int noise;
+-	if (iw->noise(ifname, &noise))
++	if (!iw->noise || iw->noise(ifname, &noise))
+ 		noise = 0;
+ 
+ 	return format_noise(noise);
+@@ -570,7 +570,7 @@
+ static char * print_rate(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int rate;
+-	if (iw->bitrate(ifname, &rate))
++	if (!iw->bitrate || iw->bitrate(ifname, &rate))
+ 		rate = -1;
+ 
+ 	return format_rate(rate);
+@@ -579,7 +579,7 @@
+ static char * print_encryption(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	struct iwinfo_crypto_entry c = { 0 };
+-	if (iw->encryption(ifname, (char *)&c))
++	if (!iw->encryption || iw->encryption(ifname, (char *)&c))
+ 		return format_encryption(NULL);
+ 
+ 	return format_encryption(&c);
+@@ -588,7 +588,7 @@
+ static char * print_hwmodes(const struct iwinfo_ops *iw, const char *ifname)
+ {
+ 	int modes;
+-	if (iw->hwmodelist(ifname, &modes))
++	if (!iw->hwmodelist || iw->hwmodelist(ifname, &modes))
+ 		modes = -1;
+ 
+ 	return format_hwmodes(modes);
+@@ -598,7 +598,7 @@
+ {
+ 	int mode;
+ 	const char *name;
+-	if (iw->htmode(ifname, &mode))
++	if (!iw->htmode || iw->htmode(ifname, &mode))
+ 		mode = -1;
+ 
+ 	name = iwinfo_htmode_name(mode);
+@@ -613,7 +613,7 @@
+ 	int supp;
+ 	static char buf[4];
+ 
+-	if (iw->mbssid_support(ifname, &supp))
++	if (!iw->mbssid_support || iw->mbssid_support(ifname, &supp))
+ 		snprintf(buf, sizeof(buf), "no");
+ 	else
+ 		snprintf(buf, sizeof(buf), "%s", supp ? "yes" : "no");
+@@ -625,7 +625,7 @@
+ {
+ 	static char buf[32];
+ 
+-	if (!iw->phyname(ifname, buf))
++	if (iw->phyname && !iw->phyname(ifname, buf))
+ 		return buf;
+ 
+ 	return "?";
+@@ -682,7 +682,7 @@
+ 	char buf[IWINFO_BUFSIZE];
+ 	struct iwinfo_scanlist_entry *e;
+ 
+-	if (iw->scanlist(ifname, buf, &len))
++	if (!iw->scanlist || iw->scanlist(ifname, buf, &len))
+ 	{
+ 		printf("Scanning not possible\n\n");
+ 		return;
+@@ -764,16 +764,16 @@
+ 	char buf[IWINFO_BUFSIZE];
+ 	struct iwinfo_txpwrlist_entry *e;
+ 
+-	if (iw->txpwrlist(ifname, buf, &len) || len <= 0)
++	if (!iw->txpwrlist || iw->txpwrlist(ifname, buf, &len) || len <= 0)
+ 	{
+ 		printf("No TX power information available\n");
+ 		return;
+ 	}
+ 
+-	if (iw->txpower(ifname, &pwr))
++	if (!iw->txpower || iw->txpower(ifname, &pwr))
+ 		pwr = -1;
+ 
+-	if (iw->txpower_offset(ifname, &off))
++	if (!iw->txpower_offset || iw->txpower_offset(ifname, &off))
+ 		off = 0;
+ 
+ 	for (i = 0; i < len; i += sizeof(struct iwinfo_txpwrlist_entry))
+@@ -794,13 +794,13 @@
+ 	char buf[IWINFO_BUFSIZE];
+ 	struct iwinfo_freqlist_entry *e;
+ 
+-	if (iw->freqlist(ifname, buf, &len) || len <= 0)
++	if (!iw->freqlist || iw->freqlist(ifname, buf, &len) || len <= 0)
+ 	{
+ 		printf("No frequency information available\n");
+ 		return;
+ 	}
+ 
+-	if (iw->frequency(ifname, &freq))
++	if (!iw->frequency || iw->frequency(ifname, &freq))
+ 		freq = -1;
+ 
+ 	for (i = 0; i < len; i += sizeof(struct iwinfo_freqlist_entry))
+@@ -823,7 +823,7 @@
+ 	char buf[IWINFO_BUFSIZE];
+ 	struct iwinfo_assoclist_entry *e;
+ 
+-	if (iw->assoclist(ifname, buf, &len))
++	if (!iw->assoclist || iw->assoclist(ifname, buf, &len))
+ 	{
+ 		printf("No information available\n");
+ 		return;
+@@ -885,13 +885,13 @@
+ 	char curcode[3];
+ 	const struct iwinfo_iso3166_label *l;
+ 
+-	if (iw->countrylist(ifname, buf, &len))
++	if (!iw->countrylist || iw->countrylist(ifname, buf, &len))
+ 	{
+ 		printf("No country code information available\n");
+ 		return;
+ 	}
+ 
+-	if (iw->country(ifname, curcode))
++	if (!iw->country || iw->country(ifname, curcode))
+ 		memset(curcode, 0, sizeof(curcode));
+ 
+ 	for (l = IWINFO_ISO3166_NAMES; l->iso3166; l++)
+@@ -909,7 +909,7 @@
+ {
+ 	int i, htmodes = 0;
+ 
+-	if (iw->htmodelist(ifname, &htmodes))
++	if (!iw->htmodelist || iw->htmodelist(ifname, &htmodes))
+ 	{
+ 		printf("No HT mode information available\n");
+ 		return;
+@@ -932,7 +932,7 @@
+ 		return;
+ 	}
+ 
+-	if (iw->lookup_phy(section, buf))
++	if (!iw->lookup_phy || iw->lookup_phy(section, buf))
+ 	{
+ 		fprintf(stderr, "Phy not found\n");
+ 		return;
+@@ -946,7 +946,7 @@
+ {
+ 	const char *path;
+ 
+-	if (!iw->phy_path || iw->phy_path(phy, &path) || !path)
++	if (!iw->phy_path || !iw->phy_path || iw->phy_path(phy, &path) || !path)
+ 		return;
+ 
+ 	printf("%s\n", path);

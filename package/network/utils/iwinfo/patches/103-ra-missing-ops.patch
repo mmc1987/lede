@@ -1,0 +1,132 @@
+--- a/iwinfo_ra.c
++++ b/iwinfo_ra.c
+@@ -998,3 +998,101 @@
+ {
+ 	return ra_get_frequency(ifname, buf);
+ }
++
++/*
++ * mt_wifi reports the running bandwidth through OID_OPERATING_INFO. Field order
++ * and width must match struct operating_info in the driver's
++ * embedded/include/oid.h; every member is one byte wide, so there is no padding.
++ */
++#define RA_OID_OPERATING_INFO 0x0957
++
++struct ra_operating_info {
++	uint8_t channel;
++	uint8_t cfg_ht_bw;    /* HT_BW_20 = 0, HT_BW_40 = 1 */
++	uint8_t cfg_vht_bw;   /* VHT_BW_2040 = 0, 80 = 1, 160 = 2, 8080 = 3 */
++	uint8_t rdd_dur_region;
++	uint8_t region;
++	uint8_t is_4x4_mode;
++	uint8_t vht_cent_ch2;
++};
++
++static int ra_query_operating_info(const char *ifname, struct ra_operating_info *oi)
++{
++	memset(oi, 0, sizeof(*oi));
++
++	return ra_oid_ioctl(ifname, RA_OID_OPERATING_INFO, (char *)oi, sizeof(*oi));
++}
++
++int ra_get_htmode(const char *ifname, int *buf)
++{
++	struct ra_operating_info oi;
++
++	if (ra_query_operating_info(ifname, &oi) < 0)
++		return -1;
++
++	switch (oi.cfg_vht_bw) {
++	case 1:
++		*buf = IWINFO_HTMODE_VHT80;
++		break;
++	case 2:
++		*buf = IWINFO_HTMODE_VHT160;
++		break;
++	case 3:
++		*buf = IWINFO_HTMODE_VHT80_80;
++		break;
++	default:
++		/* VHT_BW_2040: cfg_ht_bw picks between 20 and 40 MHz */
++		if (oi.channel > 14)
++			*buf = oi.cfg_ht_bw ? IWINFO_HTMODE_VHT40 : IWINFO_HTMODE_VHT20;
++		else
++			*buf = oi.cfg_ht_bw ? IWINFO_HTMODE_HT40 : IWINFO_HTMODE_HT20;
++		break;
++	}
++
++	return 0;
++}
++
++int ra_get_center_chan2(const char *ifname, int *buf)
++{
++	struct ra_operating_info oi;
++
++	if (ra_query_operating_info(ifname, &oi) < 0 || !oi.vht_cent_ch2)
++		return -1;
++
++	*buf = oi.vht_cent_ch2;
++
++	return 0;
++}
++
++int ra_get_center_chan1(const char *ifname, int *buf)
++{
++	/* Stub: the driver does not report the first segment centre channel */
++	(void)ifname;
++	*buf = 0;
++	return -1;
++}
++
++int ra_get_survey(const char *ifname, char *buf, int *len)
++{
++	/* Stub: no per-channel survey data behind the private ioctls */
++	(void)ifname;
++	(void)buf;
++	*len = 0;
++	return -1;
++}
++
++int ra_get_lookup_phy(const char *ifname, char *buf)
++{
++	/* Stub: the phy abstraction only exists for nl80211 */
++	(void)ifname;
++	(void)buf;
++	return -1;
++}
++
++int ra_get_phy_path(const char *phyname, const char **path)
++{
++	/* Stub: the phy abstraction only exists for nl80211 */
++	(void)phyname;
++	(void)path;
++	return -1;
++}
+--- a/iwinfo_ra.h
++++ b/iwinfo_ra.h
+@@ -37,6 +37,12 @@
+ int ra_get_mbssid_support(const char *ifname, int *buf);
+ int ra_get_hardware_id(const char *ifname, char *buf);
+ int ra_get_hardware_name(const char *ifname, char *buf);
++int ra_get_htmode(const char *ifname, int *buf);
++int ra_get_center_chan1(const char *ifname, int *buf);
++int ra_get_center_chan2(const char *ifname, int *buf);
++int ra_get_survey(const char *ifname, char *buf, int *len);
++int ra_get_lookup_phy(const char *ifname, char *buf);
++int ra_get_phy_path(const char *phyname, const char **path);
+ void ra_close(void);
+ 
+ const struct iwinfo_ops ra_ops = {
+@@ -68,6 +74,12 @@
+ 	.scanlist         = ra_get_scanlist,
+ 	.freqlist         = ra_get_freqlist,
+ 	.countrylist      = ra_get_countrylist,
++	.center_chan1     = ra_get_center_chan1,
++	.center_chan2     = ra_get_center_chan2,
++	.htmode           = ra_get_htmode,
++	.survey           = ra_get_survey,
++	.lookup_phy       = ra_get_lookup_phy,
++	.phy_path         = ra_get_phy_path,
+ 	.close            = ra_close
+ };
+ 
