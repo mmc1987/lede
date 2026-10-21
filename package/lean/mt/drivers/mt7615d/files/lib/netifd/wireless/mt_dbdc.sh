@@ -541,9 +541,8 @@ drv_mt_dbdc_setup() {
 			[[ "$channel" = "165" ]] && EXTCHA=0
 			[ "$channel" == "auto" -o "$channel" == "0" ] && {
 				#CountryRegion CN
-				# honour an explicit uci country instead of silently
-				# falling back to the US region table
-				[ -z "$country" ] && countryregion=1 && countryregion_a=0
+				countryregion=1
+				countryregion_a=0
 				channel=149
 				AutoChannelSelect=2
 			}
@@ -555,7 +554,7 @@ drv_mt_dbdc_setup() {
 			[ "$channel" == "auto" -o "$channel" == "0" ] && {
 				channel=6
 				AutoChannelSelect=2
-				[ -z "$country" ] && countryregion=1
+				countryregion=1
 			}
 			ACSSKIP="12;13;14"
 		;;
