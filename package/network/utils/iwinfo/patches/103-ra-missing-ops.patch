@@ -1,6 +1,6 @@
 --- a/iwinfo_ra.c
 +++ b/iwinfo_ra.c
-@@ -998,3 +998,101 @@
+@@ -998,3 +998,110 @@
  {
  	return ra_get_frequency(ifname, buf);
  }
@@ -32,8 +32,17 @@
 +int ra_get_htmode(const char *ifname, int *buf)
 +{
 +	struct ra_operating_info oi;
++	int ch = 0;
 +
 +	if (ra_query_operating_info(ifname, &oi) < 0)
++		return -1;
++
++	/*
++	 * mt7615d accepts the query but leaves the buffer untouched, so cross-check
++	 * the reported channel against SIOCGIWFREQ and report "unknown" rather than
++	 * a bandwidth derived from all-zero fields.
++	 */
++	if (ra_get_channel(ifname, &ch) < 0 || oi.channel != ch)
 +		return -1;
 +
 +	switch (oi.cfg_vht_bw) {
